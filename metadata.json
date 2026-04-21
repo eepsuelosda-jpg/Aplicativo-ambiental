@@ -1,0 +1,8 @@
+{
+  "name": "Sistema de Inspección EEP Bogotá",
+  "description": "Aplicación para la gestión de inspecciones técnicas de la Estructura Ecológica Principal en Bogotá, con indicadores, mapa interactivo y gestión de usuarios.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

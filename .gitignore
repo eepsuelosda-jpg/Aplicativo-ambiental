@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.cache/
+.env
+.env.local
+.vscode/
+*.log
+.DS_Store
+.gemini/
+.bash_history
+.ssh/
+.config/

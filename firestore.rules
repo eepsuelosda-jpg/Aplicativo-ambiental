@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: email (str), name (str), role (str), permissions (list)
+    //
+    // Collection: inspections
+    // Fields: inspectorId (str), inspectorName (str), createdAt (timestamp), 
+    //         generalData (map), reason (str), situations (map), 
+    //         finalConsiderations (str), location (map)
+    //
+    // Collection: zones
+    // Fields: name (str), locality (str), type (str), coordinates (list)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "eepsuelosda@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+             data.email is string &&
+             data.role in ['admin', 'inspector'];
+    }
+
+    function isValidInspection(data) {
+      return data.keys().hasAll(['inspectorId', 'createdAt', 'generalData']) &&
+             data.inspectorId is string &&
+             data.createdAt is timestamp &&
+             data.generalData is map;
+    }
+
+    function isValidZone(data) {
+      return data.keys().hasAll(['name', 'locality', 'coordinates']) &&
+             data.name is string &&
+             data.locality is string &&
+             data.coordinates is list;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /inspections/{inspectionId} {
+      allow read: if isAuthenticated() && (resource.data.inspectorId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidInspection(request.resource.data) && request.resource.data.inspectorId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.inspectorId == request.auth.uid || isAdmin()) && isValidInspection(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /zones/{zoneId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidZone(request.resource.data);
+    }
+  }
+}
